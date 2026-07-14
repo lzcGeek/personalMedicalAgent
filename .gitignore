@@ -1,0 +1,37 @@
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# ===== Maven =====
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+*.ear
+
+# ===== Log =====
+*.log
+hs_err_pid*
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+
+# ===== Temp =====
+*.tmp
+*.bak
+*.orig
