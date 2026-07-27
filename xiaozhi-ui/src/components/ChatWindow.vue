@@ -2,13 +2,25 @@
   <div class="app-layout">
     <div class="sidebar">
       <div class="logo-section">
-        <img src="@/assets/logo.png" alt="硅谷小智" width="160" height="160" />
-        <span class="logo-text">硅谷小智（医疗版）</span>
+        <img src="@/assets/logo.png" alt="个人医疗助手" width="80" height="80" />
+        <span class="logo-text">个人医疗助手</span>
       </div>
       <el-button class="new-chat-button" @click="newChat">
         <i class="fa-solid fa-plus"></i>
         &nbsp;新会话
       </el-button>
+      <!-- 历史会话列表 -->
+      <div class="conversation-list">
+        <div
+          v-for="conv in conversations"
+          :key="conv"
+          :class="['conversation-item', { active: conv === uuid }]"
+          @click="switchConversation(conv)"
+        >
+          <i class="fa-solid fa-message"></i>
+          <span>会话 {{ conv }}</span>
+        </div>
+      </div>
     </div>
     <div class="main-content">
       <div class="chat-container">
@@ -20,7 +32,6 @@
               message.isUser ? 'message user-message' : 'message bot-message'
             "
           >
-            <!-- 会话图标 -->
             <i
               :class="
                 message.isUser
@@ -28,10 +39,8 @@
                   : 'fa-solid fa-robot message-icon'
               "
             ></i>
-            <!-- 会话内容 -->
             <span>
               <span v-html="message.content"></span>
-              <!-- loading -->
               <span
                 class="loading-dots"
                 v-if="message.isThinking || message.isTyping"
@@ -67,22 +76,27 @@ const isSending = ref(false)
 const uuid = ref()
 const inputMessage = ref('')
 const messages = ref([])
+const conversations = ref([])
 
 onMounted(() => {
   initUUID()
-  // 移除 setInterval，改用手动滚动
   watch(messages, () => scrollToBottom(), { deep: true })
-  hello()
+  loadConversations()
 })
+
+const loadConversations = async () => {
+  try {
+    const res = await axios.get('/api/xiaozhi/conversations')
+    conversations.value = res.data
+  } catch (e) {
+    console.error('加载会话列表失败:', e)
+  }
+}
 
 const scrollToBottom = () => {
   if (messaggListRef.value) {
     messaggListRef.value.scrollTop = messaggListRef.value.scrollHeight
   }
-}
-
-const hello = () => {
-  sendRequest('你好')
 }
 
 const sendMessage = () => {
@@ -100,17 +114,14 @@ const sendRequest = (message) => {
     isTyping: false,
     isThinking: false,
   }
-  //第一条默认发送的用户消息”你好“不放入会话列表
-  if(messages.value.length > 0){
+  if (messages.value.length > 0) {
     messages.value.push(userMsg)
   }
 
-
-  // 添加机器人加载消息
   const botMsg = {
     isUser: false,
-    content: '', // 增量填充
-    isTyping: true, // 显示加载动画
+    content: '',
+    isTyping: true,
     isThinking: false,
   }
   messages.value.push(botMsg)
@@ -122,20 +133,22 @@ const sendRequest = (message) => {
       '/api/xiaozhi/chat',
       { memoryId: uuid.value, message },
       {
-        responseType: 'stream', // 必须为合法值 "text"
+        responseType: 'stream',
         onDownloadProgress: (e) => {
-          const fullText = e.event.target.responseText // 累积的完整文本
+          const fullText = e.event.target.responseText
           let newText = fullText.substring(lastMsg.content.length)
-          lastMsg.content += newText //增量更新
-          console.log(lastMsg)
-          scrollToBottom() // 实时滚动
+          lastMsg.content += newText
+          scrollToBottom()
         },
       }
     )
     .then(() => {
-      // 流结束后隐藏加载动画
       messages.value.at(-1).isTyping = false
       isSending.value = false
+      // 刷新会话列表
+      if (!conversations.value.includes(uuid.value.toString())) {
+        conversations.value.unshift(uuid.value.toString())
+      }
     })
     .catch((error) => {
       console.error('流式错误:', error)
@@ -145,12 +158,11 @@ const sendRequest = (message) => {
     })
 }
 
-// 初始化 UUID
 const initUUID = () => {
-  let storedUUID = localStorage.getItem('user_uuid')
+  let storedUUID = localStorage.getItem('current_uuid')
   if (!storedUUID) {
     storedUUID = uuidToNumber(uuidv4())
-    localStorage.setItem('user_uuid', storedUUID)
+    localStorage.setItem('current_uuid', storedUUID)
   }
   uuid.value = storedUUID
 }
@@ -164,24 +176,24 @@ const uuidToNumber = (uuid) => {
   return number % 1000000
 }
 
-// 转换特殊字符
-const convertStreamOutput = (output) => {
-  return output
-    .replace(/\n/g, '<br>')
-    .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-    .replace(/&/g, '&amp;') // 新增转义，避免 HTML 注入
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+const switchConversation = (convId) => {
+  if (convId === uuid.value) return
+  uuid.value = convId
+  localStorage.setItem('current_uuid', convId)
+  messages.value = []
 }
 
 const newChat = () => {
-  // 这里添加新会话的逻辑
-  console.log('开始新会话')
-  localStorage.removeItem('user_uuid')
-  window.location.reload()
+  const newId = uuidToNumber(uuidv4())
+  uuid.value = newId
+  localStorage.setItem('current_uuid', newId)
+  messages.value = []
+  if (!conversations.value.includes(newId.toString())) {
+    conversations.value.unshift(newId.toString())
+  }
 }
-
 </script>
+
 <style scoped>
 .app-layout {
   display: flex;
@@ -189,9 +201,9 @@ const newChat = () => {
 }
 
 .sidebar {
-  width: 200px;
+  width: 220px;
   background-color: #f4f4f9;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -204,14 +216,44 @@ const newChat = () => {
 }
 
 .logo-text {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .new-chat-button {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 16px;
+}
+
+.conversation-list {
+  width: 100%;
+  margin-top: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #555;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.conversation-item:hover {
+  background-color: #e8e8f0;
+}
+
+.conversation-item.active {
+  background-color: #d0d8f0;
+  color: #333;
+  font-weight: bold;
 }
 
 .main-content {
@@ -219,6 +261,7 @@ const newChat = () => {
   padding: 20px;
   overflow-y: auto;
 }
+
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -242,7 +285,6 @@ const newChat = () => {
   padding: 10px;
   border-radius: 4px;
   display: flex;
-  /* align-items: center; */
 }
 
 .user-message {
@@ -282,17 +324,16 @@ const newChat = () => {
 }
 
 @keyframes pulse {
-  0%,
-  100% {
+  0%, 100% {
     transform: scale(0.6);
     opacity: 0.4;
   }
-
   50% {
     transform: scale(1);
     opacity: 1;
   }
 }
+
 .input-container {
   display: flex;
 }
@@ -302,7 +343,6 @@ const newChat = () => {
   margin-right: 10px;
 }
 
-/* 媒体查询，当设备宽度小于等于 768px 时应用以下样式 */
 @media (max-width: 768px) {
   .main-content {
     padding: 10px 0 10px 0;
@@ -310,72 +350,63 @@ const newChat = () => {
   .app-layout {
     flex-direction: column;
   }
-
   .sidebar {
-    /* display: none; */
     width: 100%;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     padding: 10px;
   }
-
   .logo-section {
     flex-direction: row;
     align-items: center;
   }
-
   .logo-text {
-    font-size: 20px;
+    font-size: 16px;
   }
-
   .logo-section img {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
-
   .new-chat-button {
     margin-right: 30px;
     width: auto;
     margin-top: 5px;
   }
+  .conversation-list {
+    display: none;
+  }
 }
 
-/* 媒体查询，当设备宽度大于 768px 时应用原来的样式 */
 @media (min-width: 769px) {
   .main-content {
     padding: 0 0 10px 10px;
   }
-
   .app-layout {
     display: flex;
     height: 100vh;
   }
-
   .sidebar {
-    width: 200px;
+    width: 220px;
     background-color: #f4f4f9;
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-
   .logo-section {
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-
   .logo-text {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: bold;
-    margin-top: 10px;
+    margin-top: 6px;
   }
-
   .new-chat-button {
     width: 100%;
-    margin-top: 20px;
+    margin-top: 16px;
   }
 }
 </style>

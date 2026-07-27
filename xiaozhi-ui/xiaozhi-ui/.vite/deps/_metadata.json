@@ -1,0 +1,40 @@
+{
+  "hash": "80ca8a44",
+  "configHash": "78616f9d",
+  "lockfileHash": "0614c692",
+  "browserHash": "60ab7b45",
+  "optimized": {
+    "axios": {
+      "src": "../../axios/index.js",
+      "file": "axios.js",
+      "fileHash": "a330b93d",
+      "needsInterop": false
+    },
+    "element-plus": {
+      "src": "../../element-plus/es/index.mjs",
+      "file": "element-plus.js",
+      "fileHash": "f71d5d9b",
+      "needsInterop": false
+    },
+    "uuid": {
+      "src": "../../uuid/dist/esm-browser/index.js",
+      "file": "uuid.js",
+      "fileHash": "71db250b",
+      "needsInterop": false
+    },
+    "vue": {
+      "src": "../../vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "fb4b1472",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-UQWBJQZ5": {
+      "file": "chunk-UQWBJQZ5.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}
