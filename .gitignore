@@ -7,6 +7,8 @@
 .settings/
 .project
 .classpath
+.trae/                # 工作区内 IDE 临时元数据（Trae 生成的本地缓存/记忆/会话），不进仓库
+.factorypath
 
 # ===== Maven =====
 target/
@@ -14,6 +16,8 @@ target/
 *.jar
 *.war
 *.ear
+build/
+out/
 
 # ===== Log =====
 *.log
@@ -30,11 +34,27 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+application-local.properties
+application-local.yml
+application-dev.yml
+# （application.properties 模板可以进仓库，但生产 apikey 建议走环境变量，以下仅兜底避免误提本地覆盖配置）
 
 # ===== Node / Vite =====
 node_modules/
 dist/
 *.local
+
+# ===== 临时脚本 / 操作脚本（含 Git 操作、私有推送逻辑）=====
+_git_ops.ps1
+g.ps1
+push.ps1
+*.local.ps1
+
+# ===== 数据库 / 本地数据 =====
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
 
 # ===== Temp =====
 *.tmp

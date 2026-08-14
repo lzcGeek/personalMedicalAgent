@@ -3,6 +3,7 @@ package com.atguigu.java.ai.langchain4j.controller;
 import com.atguigu.java.ai.langchain4j.assistant.XiaozhiAgent;
 import com.atguigu.java.ai.langchain4j.bean.ChatForm;
 import com.atguigu.java.ai.langchain4j.bean.ChatMessages;
+import com.atguigu.java.ai.langchain4j.workflow.service.XiaozhiWorkflowService;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
@@ -26,7 +27,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +35,18 @@ import java.util.Map;
 @RequestMapping("/xiaozhi")
 public class XiaozhiController {
 
+    /**
+     * 新的工作流入口：挂号/取消走显式工作流强约束 + 记忆白名单写入；
+     * 分诊/闲聊/异常 Fallback 内部会委托给 xiaozhiAgent。
+     */
+    @Autowired
+    private XiaozhiWorkflowService xiaozhiWorkflowService;
+
+    /**
+     * 保留原 XiaozhiAgent 以备：① 工作流内部 Fallback / Agent 路径使用；
+     * ② 线上如出现紧急问题，可切回注释的兼容路径。
+     */
+    @SuppressWarnings("unused")
     @Autowired
     private XiaozhiAgent xiaozhiAgent;
 
@@ -85,8 +97,11 @@ public class XiaozhiController {
 
     @Operation(summary = "对话")
     @PostMapping(value = "/chat", produces = "text/stream;charset=utf-8")
-    public Flux<String> chat(@RequestBody ChatForm chatForm){
-        return xiaozhiAgent.chat(chatForm.getMemoryId(), chatForm.getMessage());
-    }
+    public Flux<String> chat(@RequestBody ChatForm chatForm) {
+        // ===== 默认走新工作流 =====
+        return xiaozhiWorkflowService.streamChat(chatForm.getMemoryId(), chatForm.getMessage());
 
+        // ===== 兼容回退：如线上出问题，把上面一行注释，切回原 Agent 路径即可 =====
+        // return xiaozhiAgent.chat(chatForm.getMemoryId(), chatForm.getMessage());
+    }
 }
